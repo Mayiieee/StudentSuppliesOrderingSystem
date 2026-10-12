@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Supplies — Shop</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* Page-specific: nothing extra needed, grid styles live in style.css */
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="logo">✏️</span>Student Supplies</h1>
+  <nav>
+    <a href="index.html" class="active">Shop</a>
+    <a href="cart.html">Cart (<span id="cart-count">0</span>)</a>
+    <a href="payment.html">Payment</a>
+  </nav>
+</header>
+
+<main>
+  <h2>School Supplies</h2>
+  <p class="subtitle">Click <em>Add to Cart</em>. Keyboard: press <kbd>Tab</kbd> to move, <kbd>Enter</kbd> to select.</p>
+  <div id="alert-box"></div>
+  <div class="grid" id="product-grid"></div>
+</main>
+
+<script src="app.js"></script>
+<script>
+  /* ---------- page logic: render the catalog ---------- */
+  const grid = document.getElementById("product-grid");
+
+  function renderProducts() {
+    grid.innerHTML = "";
+    PRODUCTS.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "product";
+      card.innerHTML = `
+        <img src="${p.img}" alt="${p.name}"
+             onerror="this.src='https://placehold.co/400x300/dce6f0/23303b?text=${encodeURIComponent(p.name)}'">
+        <div class="info">
+          <span class="name">${p.name}</span>
+          <span class="price">${formatPeso(p.price, false)}</span>
+          <span class="stock">In stock</span>
+          <button class="btn-add" data-id="${p.id}">Add to Cart</button>
+        </div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  /* Event delegation: one listener handles every Add button */
+  grid.addEventListener("click", e => {
+    const btn = e.target.closest(".btn-add");
+    if (!btn) return;
+    addToCart(Number(btn.dataset.id), 1);
+    flashAdded(btn);
+    showToast(`${btn.closest(".product").querySelector(".name").textContent} added.`);
+  });
+
+  function showToast(msg) {
+    const box = document.getElementById("alert-box");
+    box.innerHTML = `<div class="alert success">${msg}</div>`;
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => (box.innerHTML = ""), 1600);
+  }
+
+  renderProducts();
+</script>
+</body>
+</html>

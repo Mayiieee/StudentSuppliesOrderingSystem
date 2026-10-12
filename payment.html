@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Supplies — Payment</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1><span class="logo">💵</span>Payment</h1>
+  <nav>
+    <a href="index.html">Shop</a>
+    <a href="cart.html">Cart (<span id="cart-count">0</span>)</a>
+    <a href="payment.html" class="active">Payment</a>
+  </nav>
+</header>
+
+<main>
+  <h2>Cash Payment</h2>
+  <p class="subtitle">Enter the amount handed by the customer.</p>
+
+  <div id="payment-area"></div>
+</main>
+
+<script src="app.js"></script>
+<script>
+const area = document.getElementById("payment-area");
+
+function renderPayment() {
+  const cart = getCart();
+
+  if (cart.length === 0) {
+    area.innerHTML = `<div class="empty">
+      <p style="font-size:40px">💵</p>
+      <p>No items to pay for.</p>
+      <p style="margin-top:8px"><a href="index.html">Back to shop →</a></p>
+    </div>`;
+    return;
+  }
+
+  const total = cartTotalCentavos();
+  const totalPesos = fromCentavos(total);
+
+  /* Suggested quick-cash buttons (nearest round amounts above total) */
+  const suggestions = [];
+  [20, 50, 100, 200, 500, 1000].forEach(v => {
+    if (v >= totalPesos) suggestions.push(v);
+  });
+  const quick = suggestions.slice(0, 4)
+    .map(v => `<button type="button" class="qc" data-val="${v}">₱${v.toFixed(2)}</button>`).join("");
+
+  area.innerHTML = `
+    <div class="summary" style="margin-bottom:20px">
+      <div class="line total"><span>AMOUNT DUE</span><span>${formatPeso(total, true)}</span></div>
+    </div>
+
+    <div class="summary">
+      <label for="cash">Cash Tendered (₱)</label>
+      <input type="number" id="cash" step="0.01" min="0" placeholder="0.00"
+             autocomplete="off" inputmode="decimal">
+      <div class="quick-cash">${quick}</div>
+      <div class="field-error" id="err" role="alert"></div>
+
+      <div class="line" style="border-top:1px solid #e7edf3;margin-top:14px;padding-top:12px">
+        <span>Change</span><span class="big" id="change">₱0.00</span>
+      </div>
+
+      <div class="btn-row">
+        <a href="cart.html"><button type="button" class="btn-ghost">← Back to Cart</button></a>
+        <button type="button" class="btn-primary" id="confirm-btn">Confirm Payment</button>
+      </div>
+    </div>`;
+
+  const cashInput   = document.getElementById("cash");
+  const errBox      = document.getElementById("err");
+  const changeOut   = document.getElementById("change");
+
+  /* Live change preview while typing — cached total, no DOM re-read */
+  cashInput.addEventListener("input", () => {
+    const raw = cashInput.value.trim();
+    const n = Number(raw);
+
+    cashInput.classList.remove("invalid");
+    errBox.textContent = "";
+    changeOut.textContent = "₱0.00";
+
+    if (raw === "") return;                             // still typing, stay quiet
+    if (isNaN(n))   return;
+    if (n < 0) {
+      cashInput.classList.add("invalid");
+      errBox.textContent = "Amount cannot be negative.";
+      return;
+    }
+    const cashCent = toCentavos(n);
+    if (cashCent >= total) {
+      changeOut.textContent = formatPeso(cashCent - total, true);
+    }
+  });
+
+  /* Quick-cash buttons fill the field */
+  document.querySelectorAll(".qc").forEach(b => {
+    b.addEventListener("click", () => {
+      cashInput.value = Number(b.dataset.val).toFixed(2);
+      cashInput.dispatchEvent(new Event("input"));
+      cashInput.focus();
+    });
+  });
+
+  /* ---- Confirm: full validation chain ---- */
+  document.getElementById("confirm-btn").addEventListener("click", () => {
+    const raw = cashInput.value.trim();
+
+    const fail = (msg) => {
+      cashInput.classList.add("invalid");
+      errBox.textContent = msg;
+      cashInput.focus();
+    };
+
+    // 1. blank
+    if (raw === "") { fail("Please enter the cash amount."); return; }
+
+    // 2. not a number
+    const n = Number(raw);
+    if (isNaN(n)) { fail("That is not a valid number."); return; }
+
+    // 3. negative or zero
+    if (n < 0) { fail("Amount cannot be negative."); return; }
+    if (n === 0) { fail("Amount must be greater than ₱0.00."); return; }
+
+    // 4. insufficient (compare in centavos to avoid float error)
+    const cashCent = toCentavos(n);
+    if (cashCent < total) {
+      fail(`Insufficient. You still need ${formatPeso(total - cashCent, true)} more.`);
+      return;
+    }
+
+    // 5. paid — save the transaction for the receipt page
+    localStorage.setItem("studentSuppliesReceipt", JSON.stringify({
+      items: getCart(),
+      total: total,
+      cash: cashCent,
+      change: cashCent - total,
+      date: new Date().toISOString()
+    }));
+
+    // clear the cart only AFTER the receipt data is safely stored
+    clearCart();
+    window.location.href = "receipt.html";
+  });
+}
+
+renderPayment();
+</script>
+</body>
+</html>

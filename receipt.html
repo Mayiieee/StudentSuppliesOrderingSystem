@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Supplies — Receipt</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1><span class="logo">🧾</span>Receipt</h1>
+  <nav>
+    <a href="index.html">Shop</a>
+    <a href="cart.html">Cart (<span id="cart-count">0</span>)</a>
+    <a href="payment.html">Payment</a>
+  </nav>
+</header>
+
+<main>
+  <h2 style="text-align:center">Payment Successful</h2>
+  <p class="subtitle" style="text-align:center">Transaction saved. Thank you!</p>
+
+  <div id="receipt-area"></div>
+</main>
+
+<script src="app.js"></script>
+<script>
+const area = document.getElementById("receipt-area");
+const data = JSON.parse(localStorage.getItem("studentSuppliesReceipt") || "null");
+
+if (!data) {
+  area.innerHTML = `<div class="empty">
+    <p style="font-size:40px">🧾</p>
+    <p>No receipt found.</p>
+    <p style="margin-top:8px"><a href="index.html">Start a new transaction →</a></p>
+  </div>`;
+} else {
+  const d = new Date(data.date);
+  const stamp = d.toLocaleString("en-PH", {
+    year: "numeric", month: "short", day: "2-digit",
+    hour: "2-digit", minute: "2-digit"
+  });
+  const ref = "SS-" + d.getTime().toString().slice(-6);
+
+  const itemRows = data.items.map(i => `
+    <div class="row">
+      <span>${i.name} × ${i.qty}</span>
+      <span>${formatPeso(i.price * i.qty, true)}</span>
+    </div>`).join("");
+
+  area.innerHTML = `
+    <div class="receipt" id="printable">
+      <h3>STUDENT SUPPLIES</h3>
+      <p class="center">School Supplies Store<br>Cebu City · Tel: 555-0100</p>
+      <hr>
+      <div class="row"><span>Ref No.</span><span>${ref}</span></div>
+      <div class="row"><span>Date</span><span>${stamp}</span></div>
+      <hr>
+      ${itemRows}
+      <hr>
+      <div class="row"><span>Subtotal</span><span>${formatPeso(data.total, true)}</span></div>
+      <div class="row big"><span>TOTAL</span><span>${formatPeso(data.total, true)}</span></div>
+      <div class="row"><span>Cash</span><span>${formatPeso(data.cash, true)}</span></div>
+      <div class="row big"><span>CHANGE</span><span>${formatPeso(data.change, true)}</span></div>
+      <hr>
+      <p class="center">Items sold are not refundable.<br>Thank you and come again!</p>
+    </div>
+
+    <div class="btn-row" style="justify-content:center">
+      <button class="btn-ghost" id="print-btn">🖨 Print</button>
+      <button class="btn-primary" id="new-btn">Start New Transaction</button>
+    </div>`;
+
+  document.getElementById("print-btn").addEventListener("click", () => window.print());
+  document.getElementById("new-btn").addEventListener("click", () => {
+    localStorage.removeItem("studentSuppliesReceipt");
+    clearCart();
+    window.location.href = "index.html";
+  });
+}
+</script>
+</body>
+</html>

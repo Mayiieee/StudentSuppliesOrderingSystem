@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Supplies — Cart</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1><span class="logo">🛒</span>Your Cart</h1>
+  <nav>
+    <a href="index.html">Shop</a>
+    <a href="cart.html" class="active">Cart (<span id="cart-count">0</span>)</a>
+    <a href="payment.html">Payment</a>
+  </nav>
+</header>
+
+<main>
+  <h2>Review Your Order</h2>
+  <p class="subtitle">Adjust quantities with the − / + buttons, type a number directly, or remove an item.</p>
+
+  <div id="cart-area"></div>
+
+  <div class="btn-row">
+    <a href="index.html"><button class="btn-ghost">← Continue Shopping</button></a>
+    <button class="btn-danger" id="clear-btn">Clear Cart</button>
+    <button class="btn-primary" id="checkout-btn">Proceed to Payment →</button>
+  </div>
+</main>
+
+<script src="app.js"></script>
+<script>
+const area = document.getElementById("cart-area");
+
+function renderCart() {
+  const cart = getCart();
+
+  if (cart.length === 0) {
+    area.innerHTML = `<div class="empty">
+      <p style="font-size:40px">🛒</p>
+      <p>Your cart is empty.</p>
+      <p style="margin-top:8px"><a href="index.html">Browse school supplies →</a></p>
+    </div>`;
+    return;
+  }
+
+  /* Build the table rows. Each price is formatted from centavos. */
+  let rows = cart.map(item => `
+    <tr data-id="${item.id}">
+      <td>${item.name}</td>
+      <td class="num">${formatPeso(item.price, true)}</td>
+      <td>
+        <div class="mini">
+          <button class="dec" aria-label="Decrease ${item.name}">−</button>
+          <input type="number" class="qty-input" value="${item.qty}" min="1" aria-label="Quantity of ${item.name}">
+          <button class="inc" aria-label="Increase ${item.name}">+</button>
+        </div>
+      </td>
+      <td class="num subtotal">${formatPeso(item.price * item.qty, true)}</td>
+      <td><button class="btn-danger remove">Remove</button></td>
+    </tr>`).join("");
+
+  const total = cartTotalCentavos();
+  const units = cartCount();
+
+  area.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th class="num">Price</th>
+          <th>Quantity</th>
+          <th class="num">Subtotal</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="summary">
+      <div class="line"><span>Total units</span><span>${units}</span></div>
+      <div class="line"><span>Items</span><span>${cart.length}</span></div>
+      <div class="line total"><span>TOTAL</span><span>${formatPeso(total, true)}</span></div>
+    </div>`;
+}
+
+/* ---- One delegated listener for − / + / typing / remove ---- */
+area.addEventListener("click", e => {
+  const row = e.target.closest("tr");
+  if (!row) return;
+  const id = Number(row.dataset.id);
+
+  if (e.target.classList.contains("inc")) {
+    const line = getCart().find(i => i.id === id);
+    setQty(id, line.qty + 1);
+    renderCart();
+  }
+  if (e.target.classList.contains("dec")) {
+    const line = getCart().find(i => i.id === id);
+    setQty(id, line.qty - 1);      // setQty removes the line if it hits 0
+    renderCart();
+  }
+  if (e.target.classList.contains("remove")) {
+    removeFromCart(id);
+    renderCart();
+  }
+});
+
+/* Typing a quantity directly */
+area.addEventListener("change", e => {
+  if (!e.target.classList.contains("qty-input")) return;
+  const id = Number(e.target.closest("tr").dataset.id);
+  let val = parseInt(e.target.value, 10);
+  if (isNaN(val) || val < 1) val = 1;        // blank / 0 / negative -> back to 1
+  setQty(id, val);
+  renderCart();
+});
+
+document.getElementById("clear-btn").addEventListener("click", () => {
+  if (confirm("Remove all items from the cart?")) {
+    clearCart();
+    renderCart();
+  }
+});
+
+document.getElementById("checkout-btn").addEventListener("click", () => {
+  if (getCart().length === 0) {
+    alert("Your cart is empty. Add at least one item first.");
+    return;
+  }
+  window.location.href = "payment.html";
+});
+
+renderCart();
+</script>
+</body>
+</html>
